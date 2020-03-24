@@ -10,6 +10,7 @@ import javafx.scene.text.Text;
 
 public class Controller {
     @FXML private TextField textField;
+    @FXML private Text decimalText;
     @FXML private Text encodingText;
     @FXML private Canvas canvas;
     private GraphicsContext gc;
@@ -21,26 +22,36 @@ public class Controller {
     private int steps;
     private int stepLength;
 
+    @FXML
+    public void initialize() {
+        gc = canvas.getGraphicsContext2D();
+    }
+
     public void onOk() {
         // заливка чтобы очистить предыдущий график
         gc.setFill(Color.WHITESMOKE);
         gc.fillRect(0,0, canvas.getWidth(), canvas.getHeight());
 
         String inputString = textField.getText();
+        // если в строке меньше 8 символов - заполняем нулями слева
+        if ( inputString.length() < 8 ) {
+            String zero = "0";
+            inputString = zero.repeat(8-inputString.length()) + inputString;
+            textField.setText(inputString); // обновляем текстовое поле
+        }
+
         if ( checkInput(inputString) ) {
+            int decimal=Integer.parseInt(inputString,2);
+            decimalText.setText("Десяткове число: " + decimal);
             String outputString = dme.encode(inputString);
             encodingText.setText("Кодування: "+outputString);
             drawGraph(outputString);
             drawTactBounds();
         } else {
+            decimalText.setText("");
             encodingText.setText("");
-            showAlert("Неправильно введені дані", "Будь ласка, переконайтеся що вхідний рядок не пустий та містить лище символи \"0\" та \"1\"");
+            showAlert("Неправильно введені дані", "Рядок має містити 8 символів \"0\" або \"1\"");
         }
-    }
-
-    @FXML
-    public void initialize() {
-        gc = canvas.getGraphicsContext2D();
     }
 
     // границы между тактами
@@ -96,7 +107,8 @@ public class Controller {
 
     private boolean checkInput(String inputString) {
         int length = inputString.length();
-        if ( length == 0 ) return false; // пустая строка
+        if ( length == 0 ) return false;
+        if ( length > 8 ) return false;
 
         for (int i = 0; i < length; i++) {
             if ( (inputString.charAt(i) != '0') && (inputString.charAt(i) != '1') ) { // найден посторонний символ (не 0 и не 1)
