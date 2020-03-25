@@ -9,18 +9,22 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 
 public class Controller {
-    @FXML private TextField textField;
+    @FXML private TextField binaryTextField;
     @FXML private Text decimalText;
     @FXML private Text encodingText;
     @FXML private Canvas canvas;
     private GraphicsContext gc;
     private DifferentialManchesterEncoding dme = new DifferentialManchesterEncoding();
-    private double smallStrokeWidth = 2.0;
-    private double bigStrokeWidth = 4.0;
-    private int maxHeight = 200;
-    private int maxWidth = 800;
-    private int steps;
-    private int stepLength;
+
+    // константы
+    private int tactLength;
+    private static final int tacts = 8;
+    private static final int maxHeight = 200;
+    private static final int maxWidth = 800;
+    private static final double boundStrokeWidth = 2.0;
+    private static final double graphStrokeWidth = 4.0;
+    private static final Color boundColor = Color.BLACK;
+    private static final Color graphColor = Color.RED;
 
     @FXML
     public void initialize() {
@@ -32,16 +36,16 @@ public class Controller {
         gc.setFill(Color.WHITESMOKE);
         gc.fillRect(0,0, canvas.getWidth(), canvas.getHeight());
 
-        String inputString = textField.getText();
+        String inputString = binaryTextField.getText();
         // если в строке меньше 8 символов - заполняем нулями слева
         if ( inputString.length() < 8 ) {
             String zero = "0";
             inputString = zero.repeat(8-inputString.length()) + inputString;
-            textField.setText(inputString); // обновляем текстовое поле
+            binaryTextField.setText(inputString); // обновляем текстовое поле
         }
 
         if ( checkInput(inputString) ) {
-            int decimal=Integer.parseInt(inputString,2);
+            int decimal = Integer.parseInt(inputString,2);
             decimalText.setText("Десяткове число: " + decimal);
             String outputString = dme.encode(inputString);
             encodingText.setText("Кодування: "+outputString);
@@ -56,62 +60,61 @@ public class Controller {
 
     // границы между тактами
     private void drawTactBounds() {
-        gc.setStroke(Color.BLACK);
-        gc.setLineWidth(smallStrokeWidth);
-        for (int i = 0; i < steps; i++) {
-            int X = (i*stepLength);
-            gc.strokeLine(X, 1, X, stepLength);
+        gc.setStroke(boundColor);
+        gc.setLineWidth(boundStrokeWidth);
+        for (int i = 0; i < tacts; i++) {
+            int X = (i* tactLength);
+            gc.strokeLine(X, 1, X, tactLength);
         }
     }
 
     private void drawGraph(String outputString) {
-        int halfSteps = outputString.length(); // кол-во +-0
-        steps = halfSteps/2; // кол-во 01
-        stepLength = stepLength(steps); // длина полоски одного такта
-        int halfStepLength = stepLength(halfSteps); // длина полоски одного полутакта
+        int halfTacts = tacts*2;
+        int halfTactLength = tactLength(halfTacts); // экранная длина одного полутакта
+        tactLength = tactLength(tacts); // экранная длина одного такта
 
         // настроить размер холста
-        canvas.setHeight(stepLength);
-        canvas.setWidth( (stepLength)*steps );
+        canvas.setHeight(tactLength);
+        canvas.setWidth(tacts*tactLength);
 
         // настройки кисти
-        gc.setStroke(Color.RED);
-        gc.setLineWidth(bigStrokeWidth);
+        gc.setStroke(graphColor);
+        gc.setLineWidth(graphStrokeWidth);
 
-        int x, y;
-        x=1; y=stepLength; // поставили перо в левый нижний угол холста
+        // поставили перо в левый нижний угол холста
+        int x=1, y=tactLength;
         gc.beginPath();
         gc.lineTo(x, y);
 
-        for (int i = 0; i < halfSteps; i++) {
+        for (int i = 0; i < halfTacts; i++) {
             // вертикальная линия
             if ( outputString.charAt(i) == '+' ) {
-                y -= stepLength;
+                y -= tactLength;
                 gc.lineTo(x, y);
             } else if ( outputString.charAt(i) == '-' ) {
-                y += stepLength;
+                y += tactLength;
                 gc.lineTo(x, y);
             } // else if 0 - Y остаётся прежним
 
             // горизонтальная линия
-            x += halfStepLength;
+            x += halfTactLength;
             gc.lineTo(x, y);
         }
         gc.stroke();
     }
 
-    private int stepLength(int steps) {
+    private int tactLength(int steps) {
         int max = maxWidth / steps;
         return Math.min(max, maxHeight);
     }
 
+    // проверка правильности введённых данных
+    // не допускается строка свыше 8 символов, а также содержащая символы кроме 0 и 1
     private boolean checkInput(String inputString) {
         int length = inputString.length();
-        if ( length == 0 ) return false;
-        if ( length > 8 ) return false;
-
-        for (int i = 0; i < length; i++) {
-            if ( (inputString.charAt(i) != '0') && (inputString.charAt(i) != '1') ) { // найден посторонний символ (не 0 и не 1)
+        if ( length > tacts ) return false;
+        for (int i = 0; i < tacts; i++) {
+            if ( (inputString.charAt(i) != '0') && (inputString.charAt(i) != '1') ) { // найден посторонний символ
                 return false;
             }
         }
